@@ -10,6 +10,7 @@ from game import Game
 
 import os
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 
