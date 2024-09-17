@@ -25,7 +25,7 @@ class DQN(nn.Module):
 
 
 class DQNAgent:
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, state_dim, action_dim, device):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.memory = deque(maxlen=10000)
@@ -36,12 +36,13 @@ class DQNAgent:
         self.learning_rate = 0.0005
         self.batch_size = 64
         self.losses = []
+        self.device = device
 
         # Main Q-Network
-        self.model = DQN(state_dim, action_dim)
+        self.model = DQN(state_dim, action_dim).to(device)
 
         # Target Q-Network (a clone of the main network)
-        self.target_model = DQN(state_dim, action_dim)
+        self.target_model = DQN(state_dim, action_dim).to(device)
         # Initialize with the same weights
         self.target_model.load_state_dict(self.model.state_dict())
         # Set to evaluation mode since we don't train this model directly
@@ -59,23 +60,24 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_dim)
-        state = torch.FloatTensor(state).unsqueeze(0)
+        state = torch.FloatTensor(state).unsqueeze(
+            0).to(self.device)  # Move state to device
         q_values = self.model(state)
         return torch.argmax(q_values).item()
 
     def replay(self):
-
         losses = []
-
         if len(self.memory) < self.batch_size:
             return
 
         self.step_count += 1
-
         batch = random.sample(self.memory, self.batch_size)
+
         for state, action, reward, next_state, done in batch:
-            state = torch.FloatTensor(state).unsqueeze(0)
-            next_state = torch.FloatTensor(next_state).unsqueeze(0)
+            state = torch.FloatTensor(state).unsqueeze(
+                0).to(self.device)  # Move state to device
+            next_state = torch.FloatTensor(next_state).unsqueeze(
+                0).to(self.device)  # Move next_state to device
             target = reward
             if not done:
                 target += self.gamma * \
@@ -91,18 +93,16 @@ class DQNAgent:
 
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(), max_norm=1.0)
-
             self.optimizer.step()
 
-        # Update the target network at regular intervals
         if self.step_count % self.update_target_frequency == 0:
             self.target_model.load_state_dict(self.model.state_dict())
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-        print(sum(losses)/len(losses))
-        self.losses.append(sum(losses)/len(losses))
+        print(sum(losses) / len(losses))
+        self.losses.append(sum(losses) / len(losses))
 
     def load(self, name):
         self.model.load_state_dict(torch.load(name))

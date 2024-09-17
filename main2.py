@@ -16,7 +16,8 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 # Initialize the environment and the agent
 env = Game()
-agent = DQNAgent(state_dim=4, action_dim=4)  # 4 states and 4 possible actions
+# 4 states and 4 possible actions
+agent = DQNAgent(state_dim=4, action_dim=4, device=device)
 
 n_episodes = 10000
 accuracies = []
